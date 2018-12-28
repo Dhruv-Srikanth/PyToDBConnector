@@ -1,0 +1,133 @@
+import sqlite3
+
+conn = sqlite3.connect('CiscoPrac.db')
+a = conn.cursor()
+
+'''
+a.execute("""CREATE TABLE grade(
+            fname text,
+            lname text,
+            admnno integer,
+            event_id integer,
+            standing int,
+            grade integer
+            )""")
+
+a.execute("""CREATE TABLE events(
+            Sno integer primary key,
+            event_id integer,
+            event_name text,
+            event_cat integer
+            )""")
+
+a.execute("""CREATE TABLE cca(
+            Sno integer primary key,
+            fname text,
+            lname text,
+            class integer,
+            section text,
+            admnno integer,
+            cat_1 integer,
+            cat_2 integer,
+            cat_3 integer
+            )""")
+            
+a.execute("""CREATE TABLE house(
+            hname text,
+            points integer
+            )""")
+a.execute("INSERT INTO house VALUES(?, ?)", ("Voyagers", 0))
+a.execute("INSERT INTO house VALUES(?, ?)", ("Pioneers", 0))
+a.execute("INSERT INTO house VALUES(?, ?)", ("Challengers", 0))
+a.execute("INSERT INTO house VALUES(?, ?)", ("Explorers", 0))
+'''
+
+print("1. Add student")
+print("2. Remove Student")
+print("3. Add event")
+print("4. Remove event")
+print("5. Update event standing in the table")
+print("6. Show data of one student")
+print("7. Update house points")
+print("Enter your choice - ", end = "")
+ch = input()
+
+if ch == '1':
+
+    n = input("Enter first name - ") #Inputting student details
+    l = input("Enter last name - ")
+    g = input("Enter class - ")
+    s = input("Enter section - ")
+    admn = input("Enter admission no. - ")
+    a.execute("INSERT INTO cca(fname, lname, class, section ,admnno, cat_1, cat_2, cat_3) VALUES(?, ?, ?, ?, ?, ?, ?, ?)", (n, l, g, s, admn, 0, 0, 0))
+    #Inserting values into table
+
+    count = a.execute("SELECT COUNT(Sno) FROM events") #Counting no. of events
+    i = 1
+    while i <= count[0]:
+
+        #Adding entries in 'grade' table for each student for each event
+        id = a.execute("SELECT event_id FROM events WHERE Sno = ?", (i, ))
+        a.execute("INSERT INTO grade VALUES(?, ?, ?, ?, ?)", (n, l, admn, id[0], 0, 0))
+        i = i + 1
+
+elif ch == '2':
+
+    admn = input("Enter admission no. - ") #Checking which student to remove
+    a.execute("DELETE FROM cca WHERE admnno = ?", (admn, ))
+
+elif ch == '3':
+
+    n = input("Enter event name - ") #Accepting event details
+    id = input("Enter event id - ")
+    cat = input("Enter category that it falls into - ")
+    a.execute("INSERT INTO events(event_id, event_name, event_cat) VALUES(?, ?, ?)", (id, n, cat))
+
+    count = a.execute("SELECT COUNT(Sno) FROM cca") #Counting no. of students
+    i = 1
+    while i <= count[0]:
+
+        #Adding entries in 'grade' table for each student and each event
+        na = a.execute("SELECT fname FROM cca WHERE Sno = ?", (i,))
+        l = a.execute("SELECT lname FROM cca WHERE Sno = ?", (i,))
+        admn = a.execute("SELECT admnno FROM cca WHERE Sno = ?", (i,))
+        a.execute("INSERT INTO grade VALUES(?, ?, ?, ?, ?)", (na[0], l[0], admn[0], id, 0, 0))
+        i = i + 1
+
+elif ch == '4':
+
+    id = input("Enter event id of event to be deleted - ") #Checking which event to remove
+    a.execute("DELETE FROM events WHERE event_id = ?", (id,))
+
+elif ch == '5':
+
+    admn = input("Enter admission no. - ")
+    id = input("Enter event id - ")
+    s = input("Enter standing - ")
+    g = input("Enter calculated grade - ")  # This value is to be computed by the program and sent automatically based on the standings
+    a.execute("UPDATE grade set standing = " + s + " WHERE admnno = ? AND event_id = ?", (admn, id))
+    a.execute("UPDATE grade set grade = " + g + " WHERE admnno = ? AND event_id = ?", (admn, id))
+
+    #Grade calculation - Best grade is taken(A = 1, B = 2, C = 3 so in this case minimum is taken) for that category
+    cat = a.execute("SELECT event_cat FROM events WHERE event_id = ?", (id,))
+    val = a.execute("SELECT MIN(grade) FROM grade WHERE event_id = ? AND admnno = ?", (id, admn))
+    a.execute("UPDATE cca set cat_" + cat[0] + " = " + val[0] + " WHERE admnno = ?", (admn,))
+
+elif ch == '6':
+
+    #Displaying specific row from student details table (Includes current category grades)
+    admn = input("Enter admission no. of student - ")
+    a.execute("SELECT * FROM cca WHERE admnno = ?", (admn, ))
+    print(a.fetchall())
+
+elif ch == '7':
+
+    h = input("Enter house whose points are to be changed - ")
+    p = input("Enter no. of points to be added - ") #Input as -ve for subtraction of points
+    c = a.execute("SELECT points FROM house WHERE hname = ?", (h, ))
+    c[0] = c[0] + p #Updating house points
+    a.execute("UPDATE house set points = " + c[0] + " WHERE hname = ?", (h, ))
+
+conn.commit()
+
+conn.close()
